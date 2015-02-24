@@ -1,18 +1,31 @@
-//
-// EEBlockChain.m
-// EEBlocks
-//
-// Copyright (c) 2014 Eugene Ego. All rights reserved.
-//
-
 #import "EEBlockChain.h"
-#import "EEBlock.h"
+
+@interface EEBlockChainCallbackHolder: NSObject
+
+@property (nonatomic, copy) id callback;
+@property (nonatomic, strong) dispatch_queue_t queue;
+
+@end
+
+@implementation EEBlockChainCallbackHolder
+
+- (instancetype)initWithCallback:(id)callback queue:(dispatch_queue_t)queue
+{
+  self = [super init];
+  if(self) {
+    self.callback = callback;
+    self.queue = queue;
+  }
+  return self;
+}
+
+@end
 
 @implementation EEBlockChain
 {
   dispatch_queue_t _queue;
   NSMutableArray *_callbacks;
-  EEBlockChainErrorCallback _errorCallback;
+  EEBlockChainCallbackHolder *_finishCallback;
 
   BOOL _started;
   BOOL _paused;
@@ -20,7 +33,9 @@
 
   id _previousResult;
   NSError *_previousError;
-  EEBlockChainResultCallback _currentCallback;
+  EEBlockChainCallbackHolder *_currentCallback;
+
+  EEBlockEmpty bgTaskCompletion;
 }
 
 + (instancetype)blockChain
@@ -37,41 +52,73 @@
 {
   self = [super init];
   if(self) {
-    _queue = queue ? queue : dispatch_get_main_queue();
+    _queue = queue ?: dispatch_get_main_queue();
     _callbacks = [NSMutableArray array];
   }
   return self;
 }
 
-- (instancetype)first:(EEBlockChainResultCallback)resultCallback
+#pragma mark - Blocks
+
+- (instancetype)firstDo:(EEBlockChainResultCallback)resultCallback
 {
-  [_callbacks insertObject:resultCallback atIndex:0];
+  return [self firstOnQueue:_queue do:resultCallback];
+}
+
+- (instancetype)firstOnQueue:(dispatch_queue_t)queue do:(EEBlockChainResultCallback)resultCallback
+{
+  [_callbacks insertObject:[[EEBlockChainCallbackHolder alloc] initWithCallback:resultCallback queue:queue] atIndex:0];
   return self;
 }
 
-- (instancetype)then:(EEBlockChainResultCallback)resultCallback
+- (instancetype)thenDo:(EEBlockChainResultCallback)resultCallback
 {
-  [_callbacks addObject:resultCallback];
+  return [self thenOnQueue:_queue do:resultCallback];
+}
+
+- (instancetype)thenOnQueue:(dispatch_queue_t)queue do:(EEBlockChainResultCallback)resultCallback
+{
+  [_callbacks addObject:[[EEBlockChainCallbackHolder alloc] initWithCallback:resultCallback queue:queue]];
   return self;
 }
 
-- (instancetype)error:(EEBlockChainErrorCallback)errorCallback
+- (instancetype)onFinishDo:(EEBlockChainFinishCallback)finishCallback
 {
-  _errorCallback = errorCallback;
+  return [self onFinishOnQueue:_queue do:finishCallback];
+}
+
+- (instancetype)onFinishOnQueue:(dispatch_queue_t)queue do:(EEBlockChainFinishCallback)finishCallback
+{
+  _finishCallback = [[EEBlockChainCallbackHolder alloc] initWithCallback:finishCallback queue:queue];
   return self;
 }
+
+#pragma mark - Logic
 
 - (void)start
 {
-  [self startWithResult:_previousResult error:_previousError];
+  [self startWithResult:_previousResult error:_previousError withBackgroundTask:NO];
 }
 
-- (void)startWithResult:(id)initialResult error:(NSError *)initialError
+- (void)startWithBackgroundTask
+{
+  [self startWithResult:_previousResult error:_previousError withBackgroundTask:YES];
+}
+
+- (void)startWithResult:(id)initialResult error:(NSError *)initialError withBackgroundTask:(BOOL)backgroundTask
 {
   if(!_started && _callbacks.count > 0) {
-    dispatch_async(_queue, ^
-    {
+    dispatch_async(_queue, ^{
       if(!_started && _callbacks.count > 0) {
+        if(backgroundTask) {
+          __block UIBackgroundTaskIdentifier bgTask;
+          bgTaskCompletion = ^{
+            [[UIApplication sharedApplication] endBackgroundTask:bgTask];
+            bgTask = UIBackgroundTaskInvalid;
+          };
+          bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:bgTaskCompletion];
+        }
+
         _started = YES;
         [self nextWithResult:initialResult error:initialError];
       }
@@ -96,8 +143,7 @@
 - (void)resume
 {
   if(_started && _paused) {
-    [EEBlock doOnQueue:_queue block:^
-    {
+    [EEBlock onQueue:_queue do:^{
       if(_started && _paused) {
         _paused = NO;
         [self nextWithResult:_previousResult error:_previousError];
@@ -118,29 +164,39 @@
   _previousResult = previousResult;
   _previousError = previousError;
 
-  if(_stopped || _callbacks.count == 0) {
-    [self finish];
-  } else if(previousError) {
-    if(_errorCallback) {
-      _errorCallback(self, previousError);
+  if(_stopped || _callbacks.count == 0 || previousError) {
+    if(_finishCallback) {
+      [EEBlock onQueue:_finishCallback.queue do:^{
+        ((EEBlockChainFinishCallback)_finishCallback.callback)(self, previousResult, previousError, ^{
+          if(bgTaskCompletion) {
+            bgTaskCompletion();
+            bgTaskCompletion = nil;
+          }
+        });
+      }];
     }
-    [self finish];
+    [self finishAndEndBGTask:!_finishCallback];
   } else if(!_paused) {
     _currentCallback = _callbacks.firstObject;
     [_callbacks removeObjectAtIndex:0];
 
-    _currentCallback(self, previousResult, ^(id result, NSError *error)
-    {
-      [EEBlock doOnQueue:_queue block:^
-      {
-        [self nextWithResult:result error:error];
-      }];
-    });
+    [EEBlock onQueue:_currentCallback.queue do:^{
+      ((EEBlockChainResultCallback)_currentCallback.callback)(self, previousResult, ^(id result, NSError *error) {
+        [EEBlock onQueue:_queue do:^{
+          [self nextWithResult:result error:error];
+        }];
+      });
+    }];
   }
 }
 
-- (void)finish
+- (void)finishAndEndBGTask:(BOOL)endBGTask
 {
+  if(endBGTask && bgTaskCompletion) {
+    bgTaskCompletion();
+    bgTaskCompletion = nil;
+  }
+
   _started = NO;
   _paused = NO;
   _stopped = NO;

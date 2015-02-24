@@ -1,4 +1,4 @@
 Blocks
 ======
 
-Simple blocks wrapper
+Simple blocks wrapper for Objective-C

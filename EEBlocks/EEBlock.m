@@ -1,10 +1,3 @@
-//
-// EEBlock.m
-// EEBlocks
-//
-// Copyright (c) 2014 Eugene Ego. All rights reserved.
-//
-
 #import "EEBlock.h"
 
 @implementation EEBlock
@@ -43,35 +36,34 @@
 
 #pragma mark - Async
 
-+ (void)doOnQueue:(dispatch_queue_t)queue block:(EEBlockEmpty)block
++ (void)onQueue:(dispatch_queue_t)queue do:(EEBlockEmpty)block
 {
   dispatch_async(queue, block);
 }
 
-+ (void)doOnQueue:(dispatch_queue_t)queue block:(EEBlockEmpty)block afterDelay:(NSTimeInterval)delay
++ (void)onMainQueueDo:(EEBlockEmpty)block
+{
+  [self onQueue:[self mainQueue] do:block];
+}
+
++ (void)afterDelay:(NSTimeInterval)delay onQueue:(dispatch_queue_t)queue do:(EEBlockEmpty)block
 {
   int64_t delta = (int64_t)(NSEC_PER_SEC * delay);
   dispatch_after(dispatch_time(DISPATCH_TIME_NOW, delta), queue, block);
 }
 
-+ (void)doOnMainQueue:(EEBlockEmpty)block
++ (void)afterDelay:(NSTimeInterval)delay onMainQueueDo:(EEBlockEmpty)block
 {
-  [self doOnQueue:[self mainQueue] block:block];
-}
-
-+ (void)doOnMainQueue:(EEBlockEmpty)block afterDelay:(NSTimeInterval)delay
-{
-  [self doOnQueue:[self mainQueue] block:block afterDelay:delay];
+  [self afterDelay:delay onQueue:[self mainQueue] do:block];
 }
 
 #pragma mark - Background tasks
 
-+ (void)doWithBackgroundTask:(void (^)(EEBlockEmpty completionHandler))block
++ (void)withBackgroundTaskDo:(void (^)(EEBlockEmpty completionHandler))block
 {
   __block UIBackgroundTaskIdentifier bgTask;
 
-  EEBlockEmpty completionHandler = ^
-  {
+  EEBlockEmpty completionHandler = ^{
     [[UIApplication sharedApplication] endBackgroundTask:bgTask];
     bgTask = UIBackgroundTaskInvalid;
   };
@@ -81,27 +73,25 @@
   block(completionHandler);
 }
 
-+ (void)doOnQueue:(dispatch_queue_t)queue withBackgroundTask:(void (^)(EEBlockEmpty completionHandler))block
++ (void)onQueue:(dispatch_queue_t)queue withBackgroundTaskDo:(void (^)(EEBlockEmpty completionHandler))block
 {
   __block UIBackgroundTaskIdentifier bgTask;
 
-  EEBlockEmpty completionHandler = ^
-  {
+  EEBlockEmpty completionHandler = ^{
     [[UIApplication sharedApplication] endBackgroundTask:bgTask];
     bgTask = UIBackgroundTaskInvalid;
   };
 
   bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:completionHandler];
 
-  [self doOnQueue:queue block:^
-  {
+  [self onQueue:queue do:^{
     block(completionHandler);
   }];
 }
 
-+ (void)doOnMainQueueWithBackgroundTask:(void (^)(EEBlockEmpty completionHandler))block
++ (void)onMainQueueWithBackgroundTaskDo:(void (^)(EEBlockEmpty completionHandler))block
 {
-  [self doOnQueue:[self mainQueue] withBackgroundTask:block];
+  [self onQueue:[self mainQueue] withBackgroundTaskDo:block];
 }
 
 @end

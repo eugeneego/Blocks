@@ -1,10 +1,3 @@
-//
-// UIActionSheet+EEBlocks.m
-// EEBlocks
-//
-// Copyright (c) 2014 Eugene Ego. All rights reserved.
-//
-
 #import <objc/runtime.h>
 #import "UIActionSheet+EEBlocks.h"
 

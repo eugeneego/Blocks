@@ -1,10 +1,3 @@
-//
-// EEBlock.h
-// EEBlocks
-//
-// Copyright (c) 2014 Eugene Ego. All rights reserved.
-//
-
 #import <Foundation/Foundation.h>
 
 typedef void (^EEBlockEmpty)(void);
@@ -20,14 +13,14 @@ typedef void (^EEBlockEmpty)(void);
 + (dispatch_queue_t)queueWithBackgroundPriority;
 
 // Async
-+ (void)doOnQueue:(dispatch_queue_t)queue block:(EEBlockEmpty)block;
-+ (void)doOnQueue:(dispatch_queue_t)queue block:(EEBlockEmpty)block afterDelay:(NSTimeInterval)delay;
-+ (void)doOnMainQueue:(EEBlockEmpty)block;
-+ (void)doOnMainQueue:(EEBlockEmpty)block afterDelay:(NSTimeInterval)delay;
++ (void)onQueue:(dispatch_queue_t)queue do:(EEBlockEmpty)block;
++ (void)onMainQueueDo:(EEBlockEmpty)block;
++ (void)afterDelay:(NSTimeInterval)delay onQueue:(dispatch_queue_t)queue do:(EEBlockEmpty)block;
++ (void)afterDelay:(NSTimeInterval)delay onMainQueueDo:(EEBlockEmpty)block;
 
 // Background tasks
-+ (void)doWithBackgroundTask:(void (^)(EEBlockEmpty completionHandler))block;
-+ (void)doOnQueue:(dispatch_queue_t)queue withBackgroundTask:(void (^)(EEBlockEmpty completionHandler))block;
-+ (void)doOnMainQueueWithBackgroundTask:(void (^)(EEBlockEmpty completionHandler))block;
++ (void)withBackgroundTaskDo:(void (^)(EEBlockEmpty completionHandler))block;
++ (void)onQueue:(dispatch_queue_t)queue withBackgroundTaskDo:(void (^)(EEBlockEmpty completionHandler))block;
++ (void)onMainQueueWithBackgroundTaskDo:(void (^)(EEBlockEmpty completionHandler))block;
 
 @end

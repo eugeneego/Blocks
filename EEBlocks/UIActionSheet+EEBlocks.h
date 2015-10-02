@@ -1,3 +1,10 @@
+//
+// UIActionSheet+EEBlocks.h
+// EEBlocks
+//
+// Copyright (c) 2014 Eugene Egorov. All rights reserved.
+//
+
 #import <Foundation/Foundation.h>
 
 typedef void (^EEUIActionSheetBlock)(UIActionSheet *actionSheet);

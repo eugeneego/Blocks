@@ -1,3 +1,10 @@
+//
+// EEBlockChain.m
+// EEBlocks
+//
+// Copyright (c) 2014 Eugene Egorov. All rights reserved.
+//
+
 #import "EEBlockChain.h"
 
 @interface EEBlockChainCallbackHolder: NSObject
@@ -82,12 +89,12 @@
   return self;
 }
 
-- (instancetype)onFinishDo:(EEBlockChainFinishCallback)finishCallback
+- (instancetype)atFinishDo:(EEBlockChainFinishCallback)finishCallback
 {
-  return [self onFinishOnQueue:_queue do:finishCallback];
+  return [self atFinishOnQueue:_queue do:finishCallback];
 }
 
-- (instancetype)onFinishOnQueue:(dispatch_queue_t)queue do:(EEBlockChainFinishCallback)finishCallback
+- (instancetype)atFinishOnQueue:(dispatch_queue_t)queue do:(EEBlockChainFinishCallback)finishCallback
 {
   _finishCallback = [[EEBlockChainCallbackHolder alloc] initWithCallback:finishCallback queue:queue];
   return self;

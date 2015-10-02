@@ -1,3 +1,10 @@
+//
+// EEBlock.m
+// EEBlocks
+//
+// Copyright (c) 2014 Eugene Egorov. All rights reserved.
+//
+
 #import "EEBlock.h"
 
 @implementation EEBlock

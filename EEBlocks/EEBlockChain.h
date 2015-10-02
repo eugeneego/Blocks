@@ -1,3 +1,10 @@
+//
+// EEBlockChain.h
+// EEBlocks
+//
+// Copyright (c) 2014 Eugene Egorov. All rights reserved.
+//
+
 #import <Foundation/Foundation.h>
 #import "EEBlock.h"
 
@@ -18,8 +25,8 @@ typedef void (^EEBlockChainFinishCallback)(EEBlockChain *blockChain, id result, 
 - (instancetype)firstOnQueue:(dispatch_queue_t)queue do:(EEBlockChainResultCallback)resultCallback;
 - (instancetype)thenDo:(EEBlockChainResultCallback)resultCallback;
 - (instancetype)thenOnQueue:(dispatch_queue_t)queue do:(EEBlockChainResultCallback)resultCallback ;
-- (instancetype)onFinishDo:(EEBlockChainFinishCallback)finishCallback;
-- (instancetype)onFinishOnQueue:(dispatch_queue_t)queue do:(EEBlockChainFinishCallback)finishCallback;
+- (instancetype)atFinishDo:(EEBlockChainFinishCallback)finishCallback;
+- (instancetype)atFinishOnQueue:(dispatch_queue_t)queue do:(EEBlockChainFinishCallback)finishCallback;
 
 - (void)start;
 - (void)startWithBackgroundTask;

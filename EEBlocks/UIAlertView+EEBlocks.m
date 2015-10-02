@@ -1,3 +1,10 @@
+//
+// UIAlertView+EEBlocks.m
+// EEBlocks
+//
+// Copyright (c) 2014 Eugene Egorov. All rights reserved.
+//
+
 #import <objc/runtime.h>
 #import "UIAlertView+EEBlocks.h"
 
